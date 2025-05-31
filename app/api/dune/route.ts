@@ -32,7 +32,8 @@ export async function GET() {
         total_burnt: row.total_burnt,
         total_emission: row.total_emission,
         avg_emission_7d: row.avg_emission_7d
-      }))
+      })),
+      lastUpdated: emissionsData.execution_ended_at || null
     }),
     { status: 200 }
   );
