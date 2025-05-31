@@ -36,6 +36,12 @@ export async function GET() {
       })),
       lastUpdated: emissionsData.execution_ended_at || null
     }),
-    { status: 200 }
+    {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+        'Content-Type': 'application/json'
+      }
+    }
   );
 }
