@@ -85,28 +85,29 @@ function DashboardContent() {
     acc[d.period] = d;
     return acc;
   }, {});
-  const periods = Object.keys(emissionsByPeriod).sort();
+  // Sort periods descending (newest first)
+  const periods = Object.keys(emissionsByPeriod).sort((a, b) => b.localeCompare(a));
 
   let bgtCumulative = 0;
-  const bgtHistory = periods.map(p => {
+  const bgtHistory = [...periods].reverse().map(p => {
     bgtCumulative += emissionsByPeriod[p]?.daily_emission ?? 0;
     return bgtCumulative;
   });
 
   // Calculate BERA total supply (500M + BGT burns)
   let beraTotalCumulative = 500000000; // Initial supply
-  const beraTotalHistory = periods.map(p => {
+  const beraTotalHistory = [...periods].reverse().map(p => {
     beraTotalCumulative += Math.abs(emissionsByPeriod[p]?.burnt_amount ?? 0);
     return beraTotalCumulative;
   });
 
-  // Helper to sum BGT emissions for BGT inflation
+  // Helper to sum BGT emissions for BGT inflation (latest N days)
   function sumEmissions(days: number) {
     if (!periods.length) return null;
     return periods.slice(0, days).reduce((sum, p) => sum + (emissionsByPeriod[p]?.daily_emission ?? 0), 0);
   }
 
-  // Helper to sum BGT burned for BERA (i.e., new BERA issued) for BERA inflation
+  // Helper to sum BGT burned for BERA (i.e., new BERA issued) for BERA inflation (latest N days)
   function sumBeraFromBgt(days: number) {
     if (!periods.length) return null;
     return periods.slice(0, days).reduce((sum, p) => sum + Math.abs(emissionsByPeriod[p]?.burnt_amount ?? 0), 0);
