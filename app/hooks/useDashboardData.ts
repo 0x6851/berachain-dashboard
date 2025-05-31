@@ -3,26 +3,26 @@ import { TokenSupply, TokenPrice, DuneDataPoint } from '../types';
 import { useEffect } from 'react';
 
 async function fetchBeraSupply(): Promise<TokenSupply> {
-  const response = await fetch('/api/supply/bera');
+  const response = await fetch(`/api/supply/bera?t=${Date.now()}`);
   if (!response.ok) throw new Error('Failed to fetch BERA supply');
   return response.json();
 }
 
 async function fetchBgtSupply(): Promise<TokenSupply> {
-  const response = await fetch('/api/supply/bgt');
+  const response = await fetch(`/api/supply/bgt?t=${Date.now()}`);
   if (!response.ok) throw new Error('Failed to fetch BGT supply');
   return response.json();
 }
 
 async function fetchBeraPrice(): Promise<TokenPrice> {
-  const response = await fetch('/api/price');
+  const response = await fetch(`/api/price?t=${Date.now()}`);
   if (!response.ok) throw new Error('Failed to fetch BERA price');
   return response.json();
 }
 
 const fetchDuneEmissions = async (): Promise<{ emissions: DuneDataPoint[]; lastUpdated?: string }> => {
   try {
-    const response = await fetch('/api/dune');
+    const response = await fetch(`/api/dune?t=${Date.now()}`);
     const data = await response.json();
     
     if (!data.emissions) {

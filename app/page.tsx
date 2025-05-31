@@ -49,18 +49,22 @@ function DashboardContent() {
   useEffect(() => {
     async function checkSupply() {
       try {
-        const beraRes = await fetch('https://supply-api.berachain.com/api/stats/bera');
+        const beraRes = await fetch('https://supply-api.berachain.com/api/stats/bera?t=' + Date.now());
         const beraApi = await beraRes.json();
-        const bgtRes = await fetch('https://supply-api.berachain.com/api/stats/bgt');
+        const bgtRes = await fetch('https://supply-api.berachain.com/api/stats/bgt?t=' + Date.now());
         const bgtApi = await bgtRes.json();
+        const beraCircDiff = beraSupply ? Math.abs(beraSupply.circulatingSupply - beraApi.circulatingSupply) : 0;
+        const beraTotalDiff = beraSupply ? Math.abs(beraSupply.totalSupply - beraApi.totalSupply) : 0;
+        const bgtCircDiff = bgtSupply ? Math.abs(bgtSupply.circulatingSupply - bgtApi.circulatingSupply) : 0;
+        const bgtTotalDiff = bgtSupply ? Math.abs(bgtSupply.totalSupply - bgtApi.totalSupply) : 0;
+        console.log('Supply check:', {
+          beraSupply, beraApi, beraCircDiff, beraTotalDiff, bgtSupply, bgtApi, bgtCircDiff, bgtTotalDiff
+        });
         if (
           beraSupply && bgtSupply &&
-          (Math.abs(beraSupply.circulatingSupply - beraApi.circulatingSupply) > 1 ||
-           Math.abs(beraSupply.totalSupply - beraApi.totalSupply) > 1 ||
-           Math.abs(bgtSupply.circulatingSupply - bgtApi.circulatingSupply) > 1 ||
-           Math.abs(bgtSupply.totalSupply - bgtApi.totalSupply) > 1)
+          (beraCircDiff > 10 || beraTotalDiff > 10 || bgtCircDiff > 10 || bgtTotalDiff > 10)
         ) {
-          setSupplyWarning('Warning: Displayed supply values differ from official Berachain API. Data may be stale or incorrect.');
+          setSupplyWarning(`Warning: Displayed supply values differ from official Berachain API.\nBERA Circ: ${beraSupply.circulatingSupply} vs ${beraApi.circulatingSupply} (Δ${beraCircDiff})\nBERA Total: ${beraSupply.totalSupply} vs ${beraApi.totalSupply} (Δ${beraTotalDiff})\nBGT Circ: ${bgtSupply.circulatingSupply} vs ${bgtApi.circulatingSupply} (Δ${bgtCircDiff})\nBGT Total: ${bgtSupply.totalSupply} vs ${bgtApi.totalSupply} (Δ${bgtTotalDiff})`);
         } else {
           setSupplyWarning(null);
         }
