@@ -438,7 +438,7 @@ function InflationComparisonContent() {
                   return (
                     <tr key={meta.ticker}>
                       <td className="p-2 font-mono text-sm">{meta.ticker}</td>
-                      <td className="p-2 font-mono text-sm">
+                    <td className="p-2 font-mono text-sm">
                         {showValue && inflationResult.value !== null ? (
                           <span>
                             <InflationCell value={inflationResult.value} actualDays={inflationResult.actualDays} requestedDays={selectedTimeframe.days} />
@@ -446,10 +446,10 @@ function InflationComparisonContent() {
                         ) : (
                           '-'
                         )}
-                      </td>
+                    </td>
                       <td className="p-2 font-mono text-sm">{showValue && abs !== null ? formatNumber(abs, { decimals: 0 }) : '-'}</td>
                       <td className="p-2 font-mono text-sm">{showValue && absUsd !== null ? formatCurrency(absUsd, { decimals: 0 }) : '-'}</td>
-                    </tr>
+                  </tr>
                   );
                 })}
               </tbody>
