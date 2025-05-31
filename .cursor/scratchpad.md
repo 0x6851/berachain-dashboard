@@ -262,84 +262,479 @@ Current Issues:
 ## New Feature & Bugfix Plan (May 2025)
 
 ### Background and Motivation
-- **New Feature:** Add a fourth chart to the dashboard showing the total supply of $BERA, in addition to the existing circulating supply chart.
-- **Bug:** The Market Cap and FDV values are not displaying correctly on the dashboard. This needs to be investigated and fixed.
+The dashboard needs two new pages to provide more comprehensive analysis:
+1. A comparison page showing inflation metrics of BERA/BGT against other major L1s
+2. A detailed BGT incentives analysis page showing the relationship between incentives and inflation
 
 ### Key Challenges and Analysis
-#### For the New Chart
-- **Data Source:** Ensure we have reliable data for BERA total supply (likely from the official Berachain API or CoinGecko).
-- **UI/UX:** The new chart should be visually consistent with the existing charts and clearly labeled as "Total Supply".
+1. **Inflation Comparison Page:**
+   - Need to identify reliable data sources for other L1s' inflation metrics
+   - Need to handle different inflation calculation methodologies across chains
+   - Need to ensure consistent time periods for comparison
+   - Need to handle different genesis dates for accurate all-time comparisons
 
-#### For Market Cap/FDV Bug
-- **Data Consistency:** Market Cap and FDV require both price and supply data. If either is missing or mismatched, the values may not display.
-- **Frontend Logic:** The calculation or rendering logic may be incorrect or referencing the wrong data keys.
-- **API Response:** The API may not be returning the expected values, or the frontend may not be parsing them correctly.
+2. **BGT Incentives Page:**
+   - Need to source historical BGT incentive data
+   - Need to correlate incentive data with inflation data
+   - Need to visualize the relationship between incentives and inflation
+   - Need to handle potential data gaps or inconsistencies
 
 ### High-level Task Breakdown
-#### 1. Add Total Supply Chart for $BERA
-- **1.1** Identify the correct data source for BERA total supply (CoinGecko or official API).
-  - *Success Criteria:* Data source provides a time series of total supply.
-- **1.2** Add a new chart component to the dashboard, after the circulating supply chart, to display total supply.
-  - *Success Criteria:* Chart renders with correct data and is clearly labeled.
-- **1.3** Ensure the chart is responsive and styled consistently with the others.
-  - *Success Criteria:* Chart looks good on all screen sizes and in both light/dark mode.
-- **1.4** Add tooltips and axis labels for clarity.
-  - *Success Criteria:* Users can easily interpret the chart.
 
-#### 2. Fix Market Cap and FDV Display
-- **2.1** Investigate the calculation and rendering logic for Market Cap and FDV in the dashboard.
-  - *Success Criteria:* Identify the root cause of the missing/incorrect values.
-- **2.2** Fix any issues in the data fetching, calculation, or rendering logic.
-  - *Success Criteria:* Market Cap and FDV display correct values based on the latest price and supply data.
-- **2.3** Add error handling or fallback UI if data is missing.
-  - *Success Criteria:* Users see a helpful message or placeholder if data is unavailable.
+#### 1. Inflation Comparison Page
+1. **Data Collection Setup:**
+   - [ ] Create API endpoints for fetching other L1s' inflation data
+   - [ ] Identify and integrate with reliable data sources (CoinGecko, Messari, etc.)
+   - [ ] Create data models for storing and processing inflation metrics
 
-#### 3. Testing and Validation
-- **3.1** Write or update tests to cover the new chart and the Market Cap/FDV logic.
-  - *Success Criteria:* Tests pass and cover edge cases (e.g., missing data).
-- **3.2** Manually verify the dashboard displays all values and charts correctly.
-  - *Success Criteria:* Visual inspection confirms correct behavior.
+2. **UI/UX Implementation:**
+   - [ ] Create new page component with routing
+   - [ ] Design and implement comparison table/grid
+   - [ ] Add interactive charts for visual comparison
+   - [ ] Add filters for time periods and metrics
 
-## Project Status Board
-- [ ] Add Total Supply Chart for $BERA
-  - [ ] Identify data source
-  - [ ] Add chart component
-  - [ ] Style and label chart
-  - [ ] Add tooltips/axis labels
-- [ ] Fix Market Cap and FDV Display
-  - [ ] Investigate calculation/rendering logic
-  - [ ] Fix data or logic issues
-  - [ ] Add error handling/fallback UI
-- [ ] Testing and Validation
-  - [ ] Update/add tests
-  - [ ] Manual verification
+3. **Data Processing:**
+   - [ ] Implement inflation calculation logic for each chain
+   - [ ] Create data aggregation functions for different time periods
+   - [ ] Add data validation and error handling
 
-## Executor's Feedback or Assistance Requests
-- Currently conducting testing and validation of the dashboard components to ensure they display the data correctly and function as expected.
+#### 2. BGT Incentives Page
+1. **Data Collection Setup:**
+   - [ ] Create API endpoint for BGT incentives data
+   - [ ] Identify data source for historical incentives
+   - [ ] Create data models for incentives and correlation with inflation
+
+2. **UI/UX Implementation:**
+   - [ ] Create new page component with routing
+   - [ ] Design and implement incentives timeline view
+   - [ ] Add comparison charts for incentives vs inflation
+   - [ ] Add interactive filters and time period selectors
+
+3. **Data Processing:**
+   - [ ] Implement incentive data processing logic
+   - [ ] Create correlation analysis functions
+   - [ ] Add data validation and error handling
+
+### Project Status Board
+- [ ] Set up new page routing
+- [ ] Create data collection endpoints
+- [ ] Implement data processing logic
+- [ ] Build UI components
+- [ ] Add data visualization
+- [ ] Implement filters and interactivity
+- [ ] Add error handling and loading states
+- [ ] Test and validate
+
+### Executor's Feedback or Assistance Requests
+- Need to confirm which data sources to use for other L1s' inflation data
+- Need to verify if we have access to historical BGT incentives data
+- Need to decide on the specific metrics to show in the comparison
+
+### Lessons
+- Ensure consistent time periods when comparing inflation across different chains
+- Consider different inflation calculation methodologies when comparing chains
+- Plan for data source rate limits and caching requirements
 
 ## Background and Motivation
-The dashboard is designed to display various metrics related to BERA and BGT, including supply data and emissions. The 'Missing duneEmissions' error indicates that the data expected from the Dune API is not being processed or used correctly in the frontend.
+The inflation comparison page currently shows inconsistent 7d inflation values for BERA and BERA+BGT compared to the main dashboard, has duplicate entries for these chains, and uses inconsistent naming/tickers for all chains. The goal is to unify the calculation and display so the comparison table matches the dashboard, uses correct tickers, and has no duplicates.
 
 ## Key Challenges and Analysis
-1. **Data Fetching**: The `useDashboardData` hook fetches data from multiple endpoints, including the Dune API. The `fetchDuneEmissions` function is responsible for retrieving and mapping the emissions data.
-2. **Data Structure**: The Dune API response structure must match the expected format in the frontend. Any mismatch can lead to errors.
-3. **Error Handling**: The current implementation logs errors but may not provide enough context to diagnose the issue effectively.
+- BERA and BERA+BGT inflation must use the same calculation and data as the dashboard cards (from duneEmissions and custom logic).
+- Other chains should use CoinGecko data, but display their ticker (BTC, ETH, etc.).
+- Remove any duplicate or misnamed entries.
 
 ## High-level Task Breakdown
-1. **Verify Dune API Response**: Ensure the response from the Dune API matches the expected structure. This includes checking the `emissions` array and its fields.
-2. **Add Logging**: Implement logging in the `fetchDuneEmissions` function to capture the raw response and any errors encountered during data processing.
-3. **Check Frontend Usage**: Identify all components that use the `duneEmissions` data and ensure they handle the data correctly.
-4. **Test and Validate**: After making changes, test the application to ensure the error is resolved and the data is displayed correctly.
+
+1. **Update Chain Mapping**
+   - Create a mapping from CoinGecko IDs to tickers and display names.
+   - Ensure BERA and BERA+BGT are only included once, with correct names.
+   - **Success criteria:** All chains in the table use the correct ticker and display name; BERA/BERA+BGT appear only once each.
+
+2. **Unify Inflation Calculation**
+   - For BERA and BERA+BGT, use the same calculation as the dashboard cards (pull from the same hook/data).
+   - For other chains, use CoinGecko data as before.
+   - **Success criteria:** 7d inflation for BERA and BERA+BGT matches the dashboard cards exactly.
+
+3. **Update Table Rendering**
+   - Render only one row each for BERA and BERA+BGT.
+   - Use tickers for all chains.
+   - **Success criteria:** No duplicate rows; all tickers correct; table is clear and matches dashboard.
+
+4. **Test and Validate**
+   - Check that the 7d inflation for BERA and BERA+BGT matches the dashboard cards.
+   - Ensure no duplicate rows and all tickers are correct.
+   - **Success criteria:** Visual/manual check confirms all requirements above.
 
 ## Project Status Board
-- [ ] Verify Dune API response structure
-- [ ] Add logging in `fetchDuneEmissions`
-- [ ] Identify components using `duneEmissions`
-- [ ] Test and validate changes
+- [x] Update chain mapping and remove duplicates
+- [x] Unify inflation calculation for BERA/BERA+BGT
+- [x] Update table rendering for correct tickers and names
+- [ ] Test and validate output
 
 ## Executor's Feedback or Assistance Requests
-- Awaiting confirmation to proceed with the outlined tasks.
+- Inflation calculation for BERA and BERA+BGT now uses shared logic from lib/inflation.ts, matching the dashboard cards exactly.
+- Table rendering uses correct tickers and names, and there are no duplicate rows.
+- Ready for test and validation.
 
 ## Lessons
-- Ensure data structures match between API responses and frontend expectations.
-- Implement comprehensive logging to aid in debugging. 
+- Always use the same data/calculation source for the same metric across dashboard and comparison pages.
+- Use a single mapping for tickers and display names to avoid inconsistencies.
+
+# New Pages Implementation Plan
+
+## Background and Motivation
+The dashboard needs two new pages to provide more comprehensive analysis:
+1. A comparison page showing inflation metrics of BERA/BGT against other major L1s
+2. A detailed BGT incentives analysis page showing the relationship between incentives and inflation
+
+## Key Challenges and Analysis
+
+### 1. Inflation Comparison Page
+- **Data Sources:**
+  - CoinGecko API for current supply and price data
+  - Messari API for historical supply data
+  - Chain-specific APIs for detailed metrics
+  - Need to handle rate limits and caching
+
+- **Inflation Calculation Methodologies:**
+  - Different chains use different methods (e.g., fixed supply vs. dynamic)
+  - Need to normalize calculations for fair comparison
+  - Need to handle different genesis dates
+
+- **UI/UX Considerations:**
+  - Complex data visualization needs
+  - Interactive filtering and comparison
+  - Clear presentation of different time periods
+
+### 2. BGT Incentives Page
+- **Data Sources:**
+  - Dune Analytics for historical BGT emissions
+  - Berachain API for current incentives
+  - Need to correlate with inflation data
+
+- **Data Processing:**
+  - Complex correlation analysis
+  - Time-series data alignment
+  - Gap handling in historical data
+
+- **Visualization Requirements:**
+  - Timeline view of incentives
+  - Correlation charts
+  - Interactive filtering
+
+## High-level Task Breakdown
+
+### Phase 1: Infrastructure Setup
+1. **Project Structure:**
+   - [ ] Create new page components
+   - [ ] Set up routing
+   - [ ] Create shared components directory
+   - [ ] Set up API route handlers
+
+2. **Data Layer:**
+   - [ ] Create API endpoints for external data
+   - [ ] Implement data fetching hooks
+   - [ ] Set up caching layer
+   - [ ] Create data transformation utilities
+
+### Phase 2: Inflation Comparison Page
+1. **Data Collection:**
+   - [ ] Implement CoinGecko API integration
+   - [ ] Implement Messari API integration
+   - [ ] Create data aggregation service
+   - [ ] Implement caching strategy
+
+2. **Data Processing:**
+   - [ ] Create inflation calculation service
+   - [ ] Implement time period aggregation
+   - [ ] Create data normalization utilities
+   - [ ] Add data validation
+
+3. **UI Components:**
+   - [ ] Create comparison table component
+   - [ ] Implement interactive charts
+   - [ ] Add time period filters
+   - [ ] Create metric selectors
+
+4. **Features:**
+   - [ ] 24h/7d/30d/all-time views
+   - [ ] Chain comparison grid
+   - [ ] Interactive charts
+   - [ ] Export functionality
+
+### Phase 3: BGT Incentives Page
+1. **Data Collection:**
+   - [ ] Implement Dune Analytics integration
+   - [ ] Create incentives data service
+   - [ ] Set up correlation analysis
+   - [ ] Implement data caching
+
+2. **Data Processing:**
+   - [ ] Create incentives calculation service
+   - [ ] Implement time-series alignment
+   - [ ] Add correlation analysis
+   - [ ] Create data validation
+
+3. **UI Components:**
+   - [ ] Create timeline view
+   - [ ] Implement correlation charts
+   - [ ] Add interactive filters
+   - [ ] Create metric selectors
+
+4. **Features:**
+   - [ ] Historical incentives view
+   - [ ] Inflation correlation
+   - [ ] Interactive timeline
+   - [ ] Export functionality
+
+### Phase 4: Testing and Optimization
+1. **Testing:**
+   - [ ] Unit tests for data processing
+   - [ ] Integration tests for API endpoints
+   - [ ] E2E tests for user flows
+   - [ ] Performance testing
+
+2. **Optimization:**
+   - [ ] Implement data caching
+   - [ ] Optimize API calls
+   - [ ] Add error boundaries
+   - [ ] Implement loading states
+
+## Project Status Board
+- [ ] Phase 1: Infrastructure Setup
+  - [ ] Project Structure
+  - [ ] Data Layer
+- [ ] Phase 2: Inflation Comparison Page
+  - [ ] Data Collection
+  - [ ] Data Processing
+  - [ ] UI Components
+  - [ ] Features
+- [ ] Phase 3: BGT Incentives Page
+  - [ ] Data Collection
+  - [ ] Data Processing
+  - [ ] UI Components
+  - [ ] Features
+- [ ] Phase 4: Testing and Optimization
+  - [ ] Testing
+  - [ ] Optimization
+
+## Executor's Feedback or Assistance Requests
+- Need to confirm specific chains to include in the comparison
+- Need to verify API rate limits and quotas
+- Need to decide on specific metrics to show in the comparison
+- Need to confirm if we have access to historical BGT incentives data
+
+## Lessons
+- Ensure consistent time periods when comparing inflation across different chains
+- Consider different inflation calculation methodologies when comparing chains
+- Plan for data source rate limits and caching requirements
+- Implement proper error handling for external API calls
+- Use TypeScript for better type safety and maintainability
+- Implement proper loading states and error boundaries
+- Consider mobile responsiveness in UI design
+
+# Inflation Comparison Page Implementation Plan
+
+## Background and Motivation
+Create a comprehensive comparison page showing inflation metrics of BERA/BGT against other major L1s, focusing on different time periods (24h, 7d, 30d, and all-time) to provide clear insights into supply dynamics and token unlocks.
+
+## Key Challenges and Analysis
+
+### 1. Data Collection and Processing
+- **Data Sources:**
+  - CoinGecko API
+    - Current supply data
+    - Historical supply data (limited to 1 year for free tier)
+    - Price data for market cap calculations
+    - Token unlock data (if available)
+  - Additional unlock data sources (if needed)
+    - TokenUnlocks.app API
+    - Chain-specific documentation
+
+- **Selected Chains:**
+  1. Bitcoin (BTC)
+  2. Ethereum (ETH)
+  3. Solana (SOL)
+  4. Sui (SUI)
+  5. Avalanche (AVAX)
+  6. BNB Chain (BNB)
+  7. Sonic (S)
+  8. Sei (SEI)
+  9. Near Protocol (NEAR)
+  10. Aptos (APT)
+  11. Internet Protocol (IP)
+  12. Initia (INIT)
+
+- **Data Processing Requirements:**
+  - Normalize inflation calculations across different chains
+  - Handle different genesis dates for all-time comparisons
+  - Calculate consistent time period metrics
+  - Track and display significant token unlocks
+  - Implement proper error handling and data validation
+
+### 2. UI/UX Design
+- **Layout Structure:**
+  ```
+  +------------------------------------------+
+  |  Time Period Selector (24h/7d/30d/all)   |
+  +------------------------------------------+
+  |                                          |
+  |  Main Comparison Table                   |
+  |  - Chain info                            |
+  |  - Supply metrics                        |
+  |  - Unlock info                           |
+  |                                          |
+  +------------------------------------------+
+  |                                          |
+  |  Interactive Charts                      |
+  |  - Supply growth                         |
+  |  - Unlock timeline                       |
+  |                                          |
+  +------------------------------------------+
+  |                                          |
+  |  Detailed Metrics Panel                  |
+  |  - Chain-specific details                |
+  |  - Upcoming unlocks                      |
+  |  - Historical unlocks                    |
+  |                                          |
+  +------------------------------------------+
+  ```
+
+- **Components:**
+  1. Time Period Selector
+     - Radio buttons for period selection
+     - Last updated timestamp
+     - Auto-refresh indicator
+
+  2. Comparison Table
+     - Chain name and logo
+     - Current supply
+     - Supply change (absolute and percentage)
+     - Market cap
+     - FDV
+     - Next significant unlock
+     - Unlock impact (% of supply)
+     - Sortable columns
+     - Search/filter functionality
+
+  3. Interactive Charts
+     - Supply growth over time
+     - Unlock timeline visualization
+     - Zoom and pan controls
+     - Tooltip with detailed metrics
+
+  4. Detailed Metrics Panel
+     - Chain-specific details
+     - Upcoming unlock schedule
+     - Historical unlock events
+     - Additional context and explanations
+
+### 3. Technical Implementation
+
+#### Phase 1: Data Layer
+1. **API Integration:**
+   - [ ] Set up CoinGecko API client
+   - [ ] Create data fetching hooks
+   - [ ] Implement caching strategy
+   - [ ] Add unlock data integration
+
+2. **Data Processing:**
+   - [ ] Create inflation calculation service
+   - [ ] Implement time period aggregation
+   - [ ] Add unlock data processing
+   - [ ] Create data validation
+
+#### Phase 2: UI Components
+1. **Core Components:**
+   - [ ] Create TimePeriodSelector
+   - [ ] Create ComparisonTable
+   - [ ] Create InteractiveCharts
+   - [ ] Create MetricsPanel
+   - [ ] Create UnlockTimeline
+
+2. **Shared Components:**
+   - [ ] Create ChainLogo component
+   - [ ] Create MetricCard component
+   - [ ] Create LoadingState component
+   - [ ] Create ErrorBoundary component
+   - [ ] Create UnlockCard component
+
+#### Phase 3: Features
+1. **Table Features:**
+   - [ ] Implement sorting
+   - [ ] Add filtering
+   - [ ] Add search functionality
+   - [ ] Add pagination
+   - [ ] Add unlock filtering
+
+2. **Chart Features:**
+   - [ ] Add zoom controls
+   - [ ] Implement tooltips
+   - [ ] Add data point selection
+   - [ ] Add export functionality
+   - [ ] Add unlock event markers
+
+3. **Data Management:**
+   - [ ] Implement data caching
+   - [ ] Add auto-refresh
+   - [ ] Add manual refresh
+   - [ ] Add error handling
+
+## Project Status Board
+- [ ] Phase 1: Data Layer
+  - [x] Planning and design
+  - [ ] API Integration
+    - [ ] Set up CoinGecko API client
+    - [ ] Create data fetching hooks
+    - [ ] Implement caching strategy
+    - [ ] Add unlock data integration
+  - [ ] Data Processing
+    - [ ] Create inflation calculation service
+    - [ ] Implement time period aggregation
+    - [ ] Add unlock data processing
+    - [ ] Create data validation
+- [ ] Phase 2: UI Components
+  - [ ] Core Components
+  - [ ] Shared Components
+- [ ] Phase 3: Features
+  - [ ] Table Features
+  - [ ] Chart Features
+  - [ ] Data Management
+
+## Current Implementation Focus
+Starting with Phase 1: Data Layer
+
+### Step 1: CoinGecko API Integration
+1. Create API route handler for CoinGecko data
+2. Implement data fetching for:
+   - Current supply data
+   - Historical supply data
+   - Price data
+   - Market cap data
+3. Set up proper error handling and rate limiting
+4. Implement caching to stay within API limits
+
+### Implementation Notes
+- Keep all development in private branches
+- No public deployment until final review
+- Implement proper error handling and logging
+- Use TypeScript for type safety
+- Add comprehensive testing
+
+## Executor's Feedback or Assistance Requests
+Ready to begin implementation of the CoinGecko API integration. Will start with:
+1. Creating the API route handler
+2. Setting up the data fetching hooks
+3. Implementing the caching strategy
+
+Would you like me to proceed with creating the initial API route handler for CoinGecko integration?
+
+## Lessons
+- Ensure consistent time periods when comparing inflation across different chains
+- Consider different inflation calculation methodologies when comparing chains
+- Plan for data source rate limits and caching requirements
+- Implement proper error handling for external API calls
+- Use TypeScript for better type safety and maintainability
+- Implement proper loading states and error boundaries
+- Consider mobile responsiveness in UI design
+- Handle timezone differences for unlock events 

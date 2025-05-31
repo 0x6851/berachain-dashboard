@@ -10,7 +10,7 @@ export async function GET() {
     // Check cache
     if (cache.data && Date.now() - cache.timestamp < CACHE_DURATION) {
       console.log('Returning cached CoinGecko data');
-      return NextResponse.json(cache.data);
+      return NextResponse.json({ ...cache.data, stale: false });
     }
 
     // Fetch historical market chart data (limit to 365 days)
@@ -49,11 +49,15 @@ export async function GET() {
     // Log for debugging
     console.log('CoinGecko supplyHistory sample:', supplyHistory.slice(-3));
 
-    return NextResponse.json({ supplyHistory });
+    return NextResponse.json({ supplyHistory, stale: false });
   } catch (error) {
     console.error('Error fetching CoinGecko data:', error);
+    // If we have cached data, return it as stale
+    if (cache.data) {
+      return NextResponse.json({ ...cache.data, stale: true, warning: 'Data may be out of date due to rate limiting or fetch error.' });
+    }
     return NextResponse.json(
-      { error: 'Failed to fetch CoinGecko data', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to fetch CoinGecko data', details: error instanceof Error ? error.message : String(error), stale: false },
       { status: 500 }
     );
   }

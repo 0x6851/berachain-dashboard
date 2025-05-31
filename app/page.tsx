@@ -303,6 +303,14 @@ function DashboardContent() {
           </div>
         )}
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Berachain Dashboard</h1>
+        <div className="mb-6">
+          <a
+            href="/inflation-comparison"
+            className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-mono text-sm transition-colors duration-200"
+          >
+            View Inflation Comparison ↗
+          </a>
+        </div>
         {/* Dune Last Updated Indicator */}
         {duneLastUpdatedDisplay && (
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">{duneLastUpdatedDisplay}</div>
@@ -482,6 +490,11 @@ function DashboardContent() {
         {/* Add annualized note below inflation panels */}
         <div className="w-full text-center text-xs text-gray-400 mt-[-1.5rem] mb-12">
           * Annualized rate
+        </div>
+
+        {/* Attribution for CoinGecko data */}
+        <div className="text-xs text-gray-500 mt-4 mb-8 text-center">
+          Data provided by <a href="https://www.coingecko.com?utm_source=berachain-dashboard&utm_medium=referral" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">CoinGecko</a>
         </div>
 
         {/* Chart Tabs and Chart Display */}
