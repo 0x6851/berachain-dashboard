@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { TokenSupply, TokenPrice, DuneDataPoint } from '../types';
+import { useEffect } from 'react';
 
 async function fetchBeraSupply(): Promise<TokenSupply> {
   const response = await fetch('/api/supply/bera');
@@ -48,28 +49,36 @@ const fetchDuneEmissions = async (): Promise<{ emissions: DuneDataPoint[]; lastU
 };
 
 export function useDashboardData() {
-  const { data: beraSupply, isLoading: isLoadingBeraSupply, error: beraSupplyError } = useQuery({
+  const beraSupplyQuery = useQuery({
     queryKey: ['beraSupply'],
     queryFn: fetchBeraSupply,
+    staleTime: 0,
+    gcTime: 0,
   });
 
-  const { data: bgtSupply, isLoading: isLoadingBgtSupply, error: bgtSupplyError } = useQuery({
+  const bgtSupplyQuery = useQuery({
     queryKey: ['bgtSupply'],
     queryFn: fetchBgtSupply,
+    staleTime: 0,
+    gcTime: 0,
   });
 
-  const { data: beraPrice, isLoading: isLoadingBeraPrice, error: beraPriceError } = useQuery({
+  const beraPriceQuery = useQuery({
     queryKey: ['beraPrice'],
     queryFn: fetchBeraPrice,
+    staleTime: 0,
+    gcTime: 0,
   });
 
-  const { data: duneData, isLoading: isLoadingDuneEmissions, error: duneEmissionsError } = useQuery({
+  const duneEmissionsQuery = useQuery({
     queryKey: ['duneEmissions'],
     queryFn: fetchDuneEmissions,
     staleTime: 0,
+    gcTime: 0,
+    refetchInterval: 60000, // Refetch every minute
   });
 
-  const { data: supplyData, isLoading: isSupplyLoading, error: supplyError } = useQuery({
+  const supplyDataQuery = useQuery({
     queryKey: ['supply'],
     queryFn: async () => {
       const response = await fetch('/api/coingecko');
@@ -78,26 +87,40 @@ export function useDashboardData() {
       }
       return response.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0,
+    gcTime: 0,
   });
 
-  const duneEmissions = duneData?.emissions;
-  const duneLastUpdated = duneData?.lastUpdated;
+  // Log data changes for debugging
+  useEffect(() => {
+    if (duneEmissionsQuery.data?.emissions) {
+      console.log('Dune data updated:', {
+        latest: duneEmissionsQuery.data.emissions[0],
+        lastUpdated: duneEmissionsQuery.data.lastUpdated,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [duneEmissionsQuery.data]);
 
-  const isLoading = isLoadingBeraSupply || isLoadingBgtSupply || isLoadingBeraPrice || isLoadingDuneEmissions || isSupplyLoading;
-  const error = beraSupplyError || bgtSupplyError || beraPriceError || duneEmissionsError || supplyError;
+  const refetchAll = async () => {
+    await Promise.all([
+      beraSupplyQuery.refetch(),
+      bgtSupplyQuery.refetch(),
+      beraPriceQuery.refetch(),
+      duneEmissionsQuery.refetch(),
+      supplyDataQuery.refetch(),
+    ]);
+  };
 
   return {
-    beraSupply,
-    bgtSupply,
-    beraPrice,
-    duneEmissions,
-    duneLastUpdated,
-    supplyData,
-    isLoading,
-    error,
-    refetch: () => {
-      // Implement refetch logic if needed
-    },
+    beraSupply: beraSupplyQuery.data,
+    bgtSupply: bgtSupplyQuery.data,
+    beraPrice: beraPriceQuery.data,
+    duneEmissions: duneEmissionsQuery.data?.emissions || [],
+    duneLastUpdated: duneEmissionsQuery.data?.lastUpdated,
+    supplyData: supplyDataQuery.data,
+    isLoading: beraSupplyQuery.isLoading || bgtSupplyQuery.isLoading || beraPriceQuery.isLoading || duneEmissionsQuery.isLoading || supplyDataQuery.isLoading,
+    error: beraSupplyQuery.error || bgtSupplyQuery.error || beraPriceQuery.error || duneEmissionsQuery.error || supplyDataQuery.error,
+    refetch: refetchAll,
   };
 } 
