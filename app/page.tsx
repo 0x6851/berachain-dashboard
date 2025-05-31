@@ -255,6 +255,12 @@ function DashboardContent() {
           >
             Refresh Data
           </button>
+          <a
+            href="/inflation-comparison"
+            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 font-mono transition-colors duration-200"
+          >
+            View Inflation Comparison ↗
+          </a>
           <span className="text-sm text-gray-500 self-center">
             Last refreshed: {lastRefresh.toLocaleTimeString()}
           </span>
@@ -303,14 +309,6 @@ function DashboardContent() {
           </div>
         )}
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Berachain Dashboard</h1>
-        <div className="mb-6">
-          <a
-            href="/inflation-comparison"
-            className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-mono text-sm transition-colors duration-200"
-          >
-            View Inflation Comparison ↗
-          </a>
-        </div>
         {/* Dune Last Updated Indicator */}
         {duneLastUpdatedDisplay && (
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">{duneLastUpdatedDisplay}</div>
