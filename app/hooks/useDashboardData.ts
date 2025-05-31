@@ -19,28 +19,31 @@ async function fetchBeraPrice(): Promise<TokenPrice> {
   return response.json();
 }
 
-const fetchDuneEmissions = async (): Promise<DuneDataPoint[]> => {
+const fetchDuneEmissions = async (): Promise<{ emissions: DuneDataPoint[]; lastUpdated?: string }> => {
   try {
     const response = await fetch('/api/dune');
     const data = await response.json();
     
     if (!data.emissions) {
       console.error('No emissions data in response:', data);
-      return [];
+      return { emissions: [] };
     }
     
-    return data.emissions.map((row: any) => ({
-      period: row.period,
-      burnt_amount: row.burnt_amount,
-      daily_emission: row.daily_emission,
-      minted_amount: row.minted_amount,
-      total_burnt: row.total_burnt,
-      total_emission: row.total_emission,
-      avg_emission_7d: row.avg_emission_7d
-    }));
+    return {
+      emissions: data.emissions.map((row: any) => ({
+        period: row.period,
+        burnt_amount: row.burnt_amount,
+        daily_emission: row.daily_emission,
+        minted_amount: row.minted_amount,
+        total_burnt: row.total_burnt,
+        total_emission: row.total_emission,
+        avg_emission_7d: row.avg_emission_7d
+      })),
+      lastUpdated: data.lastUpdated
+    };
   } catch (error) {
     console.error('Error fetching Dune emissions:', error);
-    return [];
+    return { emissions: [] };
   }
 };
 
@@ -60,7 +63,7 @@ export function useDashboardData() {
     queryFn: fetchBeraPrice,
   });
 
-  const { data: duneEmissions, isLoading: isLoadingDuneEmissions, error: duneEmissionsError } = useQuery({
+  const { data: duneData, isLoading: isLoadingDuneEmissions, error: duneEmissionsError } = useQuery({
     queryKey: ['duneEmissions'],
     queryFn: fetchDuneEmissions,
   });
@@ -77,6 +80,9 @@ export function useDashboardData() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const duneEmissions = duneData?.emissions;
+  const duneLastUpdated = duneData?.lastUpdated;
+
   const isLoading = isLoadingBeraSupply || isLoadingBgtSupply || isLoadingBeraPrice || isLoadingDuneEmissions || isSupplyLoading;
   const error = beraSupplyError || bgtSupplyError || beraPriceError || duneEmissionsError || supplyError;
 
@@ -85,6 +91,7 @@ export function useDashboardData() {
     bgtSupply,
     beraPrice,
     duneEmissions,
+    duneLastUpdated,
     supplyData,
     isLoading,
     error,

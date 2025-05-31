@@ -41,7 +41,7 @@ const METRIC_EXPLANATIONS = {
 };
 
 function DashboardContent() {
-  const { beraSupply, bgtSupply, beraPrice, duneEmissions, supplyData, isLoading, error, refetch } = useDashboardData();
+  const { beraSupply, bgtSupply, beraPrice, duneEmissions, duneLastUpdated, supplyData, isLoading, error, refetch } = useDashboardData();
 
   // Defensive: check for data
   if (!duneEmissions) {
@@ -158,6 +158,13 @@ function DashboardContent() {
   // Chart tab state
   const [selectedChart, setSelectedChart] = useState<'bera' | 'bgt' | 'beraTotal'>('bera');
 
+  // Format last updated time for Dune data
+  let duneLastUpdatedDisplay = null;
+  if (duneLastUpdated) {
+    const date = new Date(duneLastUpdated);
+    duneLastUpdatedDisplay = `Last updated: ${date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`;
+  }
+
   if (error) {
     console.log('Dashboard error:', error);
     const errorStack = typeof error === 'object' && error !== null && 'stack' in error ? (error as any).stack : null;
@@ -197,6 +204,10 @@ function DashboardContent() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Berachain Dashboard</h1>
+        {/* Dune Last Updated Indicator */}
+        {duneLastUpdatedDisplay && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">{duneLastUpdatedDisplay}</div>
+        )}
         {/* Combined Stats Panel */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-10">
           <div className="border p-4 rounded-lg shadow-sm bg-white dark:bg-gray-800 flex flex-col col-span-1 transition-all duration-200 hover:shadow-md hover:border-blue-400 focus-within:shadow-md focus-within:border-blue-400">
