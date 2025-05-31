@@ -21,10 +21,11 @@ export async function GET() {
     console.log('First Emissions Row:', emissionsData.result.rows[0]);
   }
 
-  // Return the data in the expected format
+  // Sort emissions by period descending (most recent first)
+  const sortedRows = [...(emissionsData.result.rows || [])].sort((a, b) => b.period.localeCompare(a.period));
   return new Response(
     JSON.stringify({
-      emissions: emissionsData.result.rows.map((row: any) => ({
+      emissions: sortedRows.map((row: any) => ({
         period: row.period,
         burnt_amount: row.burnt_amount,
         daily_emission: row.daily_emission,

@@ -66,6 +66,7 @@ export function useDashboardData() {
   const { data: duneData, isLoading: isLoadingDuneEmissions, error: duneEmissionsError } = useQuery({
     queryKey: ['duneEmissions'],
     queryFn: fetchDuneEmissions,
+    staleTime: 0,
   });
 
   const { data: supplyData, isLoading: isSupplyLoading, error: supplyError } = useQuery({

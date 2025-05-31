@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -42,6 +42,32 @@ const METRIC_EXPLANATIONS = {
 
 function DashboardContent() {
   const { beraSupply, bgtSupply, beraPrice, duneEmissions, duneLastUpdated, supplyData, isLoading, error, refetch } = useDashboardData();
+  const [supplyWarning, setSupplyWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkSupply() {
+      try {
+        const beraRes = await fetch('https://supply-api.berachain.com/api/stats/bera');
+        const beraApi = await beraRes.json();
+        const bgtRes = await fetch('https://supply-api.berachain.com/api/stats/bgt');
+        const bgtApi = await bgtRes.json();
+        if (
+          beraSupply && bgtSupply &&
+          (Math.abs(beraSupply.circulatingSupply - beraApi.circulatingSupply) > 1 ||
+           Math.abs(beraSupply.totalSupply - beraApi.totalSupply) > 1 ||
+           Math.abs(bgtSupply.circulatingSupply - bgtApi.circulatingSupply) > 1 ||
+           Math.abs(bgtSupply.totalSupply - bgtApi.totalSupply) > 1)
+        ) {
+          setSupplyWarning('Warning: Displayed supply values differ from official Berachain API. Data may be stale or incorrect.');
+        } else {
+          setSupplyWarning(null);
+        }
+      } catch (e) {
+        setSupplyWarning('Warning: Could not verify supply values with official Berachain API.');
+      }
+    }
+    checkSupply();
+  }, [beraSupply, bgtSupply]);
 
   // Defensive: check for data
   if (!duneEmissions) {
@@ -203,6 +229,11 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        {supplyWarning && (
+          <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 rounded border border-yellow-300 text-sm">
+            {supplyWarning}
+          </div>
+        )}
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Berachain Dashboard</h1>
         {/* Dune Last Updated Indicator */}
         {duneLastUpdatedDisplay && (
