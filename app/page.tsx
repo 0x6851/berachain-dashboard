@@ -43,28 +43,22 @@ const METRIC_EXPLANATIONS = {
 function DashboardContent() {
   const { beraSupply, bgtSupply, beraPrice, duneEmissions, duneLastUpdated, supplyData, isLoading, error, refetch } = useDashboardData();
   const [supplyWarning, setSupplyWarning] = useState<string | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
     async function checkSupply() {
       try {
-        const beraRes = await fetch('https://supply-api.berachain.com/api/stats/bera?t=' + Date.now());
+        const beraRes = await fetch('https://supply-api.berachain.com/api/stats/bera');
         const beraApi = await beraRes.json();
-        const bgtRes = await fetch('https://supply-api.berachain.com/api/stats/bgt?t=' + Date.now());
+        const bgtRes = await fetch('https://supply-api.berachain.com/api/stats/bgt');
         const bgtApi = await bgtRes.json();
-        const beraCircDiff = beraSupply ? Math.abs(beraSupply.circulatingSupply - beraApi.circulatingSupply) : 0;
-        const beraTotalDiff = beraSupply ? Math.abs(beraSupply.totalSupply - beraApi.totalSupply) : 0;
-        const bgtCircDiff = bgtSupply ? Math.abs(bgtSupply.circulatingSupply - bgtApi.circulatingSupply) : 0;
-        const bgtTotalDiff = bgtSupply ? Math.abs(bgtSupply.totalSupply - bgtApi.totalSupply) : 0;
-        console.log('Supply check:', {
-          beraSupply, beraApi, beraCircDiff, beraTotalDiff, bgtSupply, bgtApi, bgtCircDiff, bgtTotalDiff
-        });
         if (
           beraSupply && bgtSupply &&
-          (beraCircDiff > 10 || beraTotalDiff > 10 || bgtCircDiff > 10 || bgtTotalDiff > 10)
+          (Math.abs(beraSupply.circulatingSupply - beraApi.circulatingSupply) > 1 ||
+           Math.abs(beraSupply.totalSupply - beraApi.totalSupply) > 1 ||
+           Math.abs(bgtSupply.circulatingSupply - bgtApi.circulatingSupply) > 1 ||
+           Math.abs(bgtSupply.totalSupply - bgtApi.totalSupply) > 1)
         ) {
-          setSupplyWarning(`Warning: Displayed supply values differ from official Berachain API.\nBERA Circ: ${beraSupply.circulatingSupply} vs ${beraApi.circulatingSupply} (Δ${beraCircDiff})\nBERA Total: ${beraSupply.totalSupply} vs ${beraApi.totalSupply} (Δ${beraTotalDiff})\nBGT Circ: ${bgtSupply.circulatingSupply} vs ${bgtApi.circulatingSupply} (Δ${bgtCircDiff})\nBGT Total: ${bgtSupply.totalSupply} vs ${bgtApi.totalSupply} (Δ${bgtTotalDiff})`);
+          setSupplyWarning('Warning: Displayed supply values differ from official Berachain API. Data may be stale or incorrect.');
         } else {
           setSupplyWarning(null);
         }
@@ -89,31 +83,28 @@ function DashboardContent() {
     acc[d.period] = d;
     return acc;
   }, {});
-  // Sort periods descending (newest first)
-  const periods = Object.keys(emissionsByPeriod).sort((a, b) => b.localeCompare(a));
+  const periods = Object.keys(emissionsByPeriod).sort();
 
   let bgtCumulative = 0;
-  const bgtHistory = [...periods].reverse().map(p => {
+  const bgtHistory = periods.map(p => {
     bgtCumulative += emissionsByPeriod[p]?.daily_emission ?? 0;
     return bgtCumulative;
   });
 
-  // Calculate BERA total supply (use API value, fallback to 500M only if missing)
-  const beraTotalSupply = beraSupply?.totalSupply ?? 500000000;
-  if (!beraSupply?.totalSupply) {
-    console.warn('Warning: Using fallback 500M for BERA total supply, API value missing');
-  }
-  const beraTotalHistory = [...periods].reverse().map(p => {
-    return beraTotalSupply;
+  // Calculate BERA total supply (500M + BGT burns)
+  let beraTotalCumulative = 500000000; // Initial supply
+  const beraTotalHistory = periods.map(p => {
+    beraTotalCumulative += Math.abs(emissionsByPeriod[p]?.burnt_amount ?? 0);
+    return beraTotalCumulative;
   });
 
-  // Helper to sum BGT emissions for BGT inflation (latest N days)
+  // Helper to sum BGT emissions for BGT inflation
   function sumEmissions(days: number) {
     if (!periods.length) return null;
     return periods.slice(0, days).reduce((sum, p) => sum + (emissionsByPeriod[p]?.daily_emission ?? 0), 0);
   }
 
-  // Helper to sum BGT burned for BERA (i.e., new BERA issued) for BERA inflation (latest N days)
+  // Helper to sum BGT burned for BERA (i.e., new BERA issued) for BERA inflation
   function sumBeraFromBgt(days: number) {
     if (!periods.length) return null;
     return periods.slice(0, days).reduce((sum, p) => sum + Math.abs(emissionsByPeriod[p]?.burnt_amount ?? 0), 0);
@@ -200,12 +191,6 @@ function DashboardContent() {
     duneLastUpdatedDisplay = `Last updated: ${date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`;
   }
 
-  // Force refresh all data
-  const handleRefresh = async () => {
-    await refetch();
-    setLastRefresh(new Date());
-  };
-
   if (error) {
     console.log('Dashboard error:', error);
     const errorStack = typeof error === 'object' && error !== null && 'stack' in error ? (error as any).stack : null;
@@ -244,61 +229,6 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="flex gap-4 mb-4">
-          <button
-            onClick={() => setShowDebug(!showDebug)}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded text-sm"
-          >
-            {showDebug ? 'Hide Debug' : 'Show Debug'}
-          </button>
-          <button
-            onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-          >
-            Refresh Data
-          </button>
-          <span className="text-sm text-gray-500 self-center">
-            Last refreshed: {lastRefresh.toLocaleTimeString()}
-          </span>
-        </div>
-
-        {/* Debug Toggle */}
-        {showDebug && (
-          <div className="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs font-mono overflow-auto">
-            <h3 className="font-bold mb-2">Debug Info:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-bold mb-1">Raw API Response:</h4>
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify({
-                    duneEmissions: duneEmissions?.[0],
-                    duneLastUpdated,
-                    beraSupply,
-                    bgtSupply,
-                    beraPrice,
-                    beraTotalSupply,
-                    beraTotalSupplyFallback: !beraSupply?.totalSupply ? true : false
-                  }, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <h4 className="font-bold mb-1">Displayed Values:</h4>
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify({
-                    latestEmissions: duneEmissions?.[0],
-                    lastUpdated: duneLastUpdated,
-                    beraCirculating: beraSupply?.circulatingSupply,
-                    beraTotal: beraSupply?.totalSupply,
-                    bgtCirculating: bgtSupply?.circulatingSupply,
-                    bgtTotal: bgtSupply?.totalSupply,
-                    beraPrice: beraPrice?.usd
-                  }, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </div>
-        )}
-
         {supplyWarning && (
           <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 rounded border border-yellow-300 text-sm">
             {supplyWarning}
@@ -322,7 +252,7 @@ function DashboardContent() {
           <div className="border p-4 rounded-lg shadow-sm bg-white dark:bg-gray-800 flex flex-col col-span-1 transition-all duration-200 hover:shadow-md hover:border-blue-400 focus-within:shadow-md focus-within:border-blue-400">
             <div className="font-mono text-lg mb-2 text-gray-900 dark:text-white font-bold border-b-2 border-blue-200 pb-1">BERA Supply</div>
             <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Circulating</span><span className="text-right font-mono tabular-nums text-lg">{formatNumber(beraSupply?.circulatingSupply, { compact: true })}</span></div>
-            <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Total</span><span className="text-right font-mono tabular-nums text-lg">{formatNumber(beraTotalSupply, { compact: true })}</span></div>
+            <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Total</span><span className="text-right font-mono tabular-nums text-lg">{formatNumber(beraSupply?.totalSupply, { compact: true })}</span></div>
             <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Market Cap</span><span className="text-right font-mono tabular-nums text-lg">{beraMarketCap ? formatCurrency(beraMarketCap, { compact: true }) : '-'}</span></div>
             <div className="flex justify-between items-center"><span className="text-xs text-gray-500">FDV</span><span className="text-right font-mono tabular-nums text-lg">{beraFDV ? formatCurrency(beraFDV, { compact: true }) : '-'}</span></div>
           </div>
@@ -530,8 +460,6 @@ function DashboardContent() {
                     scales: {
                       y: {
                         beginAtZero: false,
-                        min: 100_000_000,
-                        max: 150_000_000,
                         grid: { color: 'rgba(0, 0, 0, 0.1)' },
                       },
                       x: { grid: { color: 'rgba(0, 0, 0, 0.1)' } },
@@ -551,9 +479,7 @@ function DashboardContent() {
                     },
                     scales: {
                       y: {
-                        beginAtZero: true,
-                        min: 0,
-                        max: 20_000_000,
+                        beginAtZero: false,
                         grid: { color: 'rgba(0, 0, 0, 0.1)' },
                       },
                       x: { grid: { color: 'rgba(0, 0, 0, 0.1)' } },
@@ -574,8 +500,6 @@ function DashboardContent() {
                     scales: {
                       y: {
                         beginAtZero: false,
-                        min: 500_000_000,
-                        max: 510_000_000,
                         grid: { color: 'rgba(0, 0, 0, 0.1)' },
                       },
                       x: { grid: { color: 'rgba(0, 0, 0, 0.1)' } },
