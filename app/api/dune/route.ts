@@ -6,6 +6,8 @@ export async function GET() {
   const emissionsRes = await fetch(`https://api.dune.com/api/v1/query/${emissionsQueryId}/results`, {
     headers: {
       'x-dune-api-key': apiKey,
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
     },
   });
 
@@ -56,7 +58,10 @@ export async function GET() {
     {
       status: 200,
       headers: {
-        'Cache-Control': 'no-store, max-age=0',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
         'Content-Type': 'application/json'
       }
     }
