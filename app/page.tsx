@@ -98,14 +98,13 @@ function DashboardContent() {
     return bgtCumulative;
   });
 
-  // Calculate BERA total supply (API value + BGT burns since latest Dune period)
-  let beraTotalCumulative = beraSupply?.totalSupply ?? 500000000; // Use API value, fallback to 500M
+  // Calculate BERA total supply (use API value, fallback to 500M only if missing)
+  const beraTotalSupply = beraSupply?.totalSupply ?? 500000000;
   if (!beraSupply?.totalSupply) {
     console.warn('Warning: Using fallback 500M for BERA total supply, API value missing');
   }
   const beraTotalHistory = [...periods].reverse().map(p => {
-    beraTotalCumulative += Math.abs(emissionsByPeriod[p]?.burnt_amount ?? 0);
-    return beraTotalCumulative;
+    return beraTotalSupply;
   });
 
   // Helper to sum BGT emissions for BGT inflation (latest N days)
@@ -276,7 +275,9 @@ function DashboardContent() {
                     duneLastUpdated,
                     beraSupply,
                     bgtSupply,
-                    beraPrice
+                    beraPrice,
+                    beraTotalSupply,
+                    beraTotalSupplyFallback: !beraSupply?.totalSupply ? true : false
                   }, null, 2)}
                 </pre>
               </div>
@@ -321,7 +322,7 @@ function DashboardContent() {
           <div className="border p-4 rounded-lg shadow-sm bg-white dark:bg-gray-800 flex flex-col col-span-1 transition-all duration-200 hover:shadow-md hover:border-blue-400 focus-within:shadow-md focus-within:border-blue-400">
             <div className="font-mono text-lg mb-2 text-gray-900 dark:text-white font-bold border-b-2 border-blue-200 pb-1">BERA Supply</div>
             <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Circulating</span><span className="text-right font-mono tabular-nums text-lg">{formatNumber(beraSupply?.circulatingSupply, { compact: true })}</span></div>
-            <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Total</span><span className="text-right font-mono tabular-nums text-lg">{formatNumber(beraSupply?.totalSupply, { compact: true })}</span></div>
+            <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Total</span><span className="text-right font-mono tabular-nums text-lg">{formatNumber(beraTotalSupply, { compact: true })}</span></div>
             <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Market Cap</span><span className="text-right font-mono tabular-nums text-lg">{beraMarketCap ? formatCurrency(beraMarketCap, { compact: true }) : '-'}</span></div>
             <div className="flex justify-between items-center"><span className="text-xs text-gray-500">FDV</span><span className="text-right font-mono tabular-nums text-lg">{beraFDV ? formatCurrency(beraFDV, { compact: true }) : '-'}</span></div>
           </div>
