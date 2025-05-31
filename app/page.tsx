@@ -98,8 +98,11 @@ function DashboardContent() {
     return bgtCumulative;
   });
 
-  // Calculate BERA total supply (500M + BGT burns)
-  let beraTotalCumulative = 500000000; // Initial supply
+  // Calculate BERA total supply (API value + BGT burns since latest Dune period)
+  let beraTotalCumulative = beraSupply?.totalSupply ?? 500000000; // Use API value, fallback to 500M
+  if (!beraSupply?.totalSupply) {
+    console.warn('Warning: Using fallback 500M for BERA total supply, API value missing');
+  }
   const beraTotalHistory = [...periods].reverse().map(p => {
     beraTotalCumulative += Math.abs(emissionsByPeriod[p]?.burnt_amount ?? 0);
     return beraTotalCumulative;
