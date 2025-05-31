@@ -12,35 +12,14 @@ export async function GET() {
 
     // Defensive: check for valid circulatingSupply
     let circulatingSupply = Number(beraData.circulatingSupply);
+    let totalSupply = Number(beraData.totalSupply);
     if (!isFinite(circulatingSupply) || circulatingSupply <= 0) {
       console.error('Invalid or missing circulatingSupply:', beraData.circulatingSupply);
       return new Response(JSON.stringify({ error: 'Invalid or missing circulatingSupply', details: beraData }), { status: 500 });
     }
-
-    // Fetch Dune data to get BGT burns
-    const duneRes = await fetch('https://api.dune.com/api/v1/query/4740951/results', {
-      headers: {
-        'x-dune-api-key': '9AvqLP9hTGqiPFDykRm04v2vHqXuwtSn',
-      },
-    });
-    if (!duneRes.ok) {
-      const text = await duneRes.text();
-      console.error('Dune API error:', duneRes.status, text);
-      return new Response(JSON.stringify({ error: 'Dune API error', status: duneRes.status, details: text }), { status: 500 });
-    }
-    const duneData = await duneRes.json();
-    console.log('Dune data:', duneData);
-
-    // Calculate total BERA from BGT burns
-    const beraFromBurns = duneData.result?.rows?.reduce((sum: number, row: any) => {
-      return sum + (row.bera_from_bgt || 0);
-    }, 0) || 0;
-
-    // Total supply is initial 500M plus any BERA from burns
-    const totalSupply = 500000000 + beraFromBurns;
-    if (!isFinite(totalSupply) || totalSupply < 500000000) {
-      console.error('Invalid totalSupply calculation:', totalSupply);
-      return new Response(JSON.stringify({ error: 'Invalid totalSupply calculation', details: { beraFromBurns, totalSupply } }), { status: 500 });
+    if (!isFinite(totalSupply) || totalSupply <= 0) {
+      console.warn('Invalid or missing totalSupply from API, falling back to 500M');
+      totalSupply = 500000000;
     }
 
     // Transform the response to match our TokenSupply type
