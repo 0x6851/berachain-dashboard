@@ -1,5 +1,6 @@
 let cache: { data: any; timestamp: number; source: string; stale: boolean } = { data: null, timestamp: 0, source: '', stale: false };
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY || '';
 
 export async function GET() {
   // Check cache first
@@ -10,7 +11,11 @@ export async function GET() {
 
   // Try CoinGecko first
   try {
-    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=berachain-bera&vs_currencies=usd,btc&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true');
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=berachain-bera&vs_currencies=usd,btc&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, {
+      headers: {
+        'x-cg-demo-api-key': COINGECKO_API_KEY
+      }
+    });
     if (!res.ok) throw new Error('CoinGecko API error: ' + res.status);
     const data = await res.json();
     const price = data['berachain-bera'];

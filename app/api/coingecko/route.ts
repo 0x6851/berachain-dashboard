@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 const COINGECKO_ID = 'berachain-bera';
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
+const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY || '';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const cache: { data: any; timestamp: number } = { data: null, timestamp: 0 };
 
@@ -16,7 +17,11 @@ export async function GET() {
     // Fetch historical market chart data (limit to 365 days)
     const url = `${COINGECKO_BASE_URL}/coins/${COINGECKO_ID}/market_chart?vs_currency=usd&days=365`;
     console.log('Fetching CoinGecko data from', url);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'x-cg-demo-api-key': COINGECKO_API_KEY
+      }
+    });
     if (!response.ok) {
       const errorText = await response.text();
       console.error('CoinGecko API error:', response.status, response.statusText, errorText);

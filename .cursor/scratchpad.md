@@ -737,4 +737,118 @@ Would you like me to proceed with creating the initial API route handler for Coi
 - Use TypeScript for better type safety and maintainability
 - Implement proper loading states and error boundaries
 - Consider mobile responsiveness in UI design
-- Handle timezone differences for unlock events 
+- Handle timezone differences for unlock events
+
+## Plan: Fix API Error Handling and Rate Limiting
+
+### Background and Motivation
+The inflation comparison page is experiencing several API-related issues:
+1. 401 Unauthorized errors from CoinGecko API
+2. Rate limiting issues causing request failures
+3. 404 errors for BERA and BGT data
+4. Inconsistent API key configuration
+
+### Key Challenges and Analysis
+1. **API Authentication:**
+   - CoinGecko API requires proper API key configuration
+   - Current implementation may not be correctly passing the API key
+   - Need to handle both authenticated and unauthenticated requests
+
+2. **Rate Limiting:**
+   - CoinGecko has strict rate limits (10-50 calls/minute depending on tier)
+   - Current retry mechanism may not be optimal
+   - Need better handling of rate limit responses
+
+3. **Data Availability:**
+   - BERA and BGT data may not be available through standard endpoints
+   - Need to identify correct endpoints or alternative data sources
+   - Handle 404 errors gracefully with user feedback
+
+### High-level Task Breakdown
+1. **Fix API Authentication:**
+   - [ ] Review and fix API key configuration
+   - [ ] Implement proper API key header format
+   - [ ] Add fallback to unauthenticated requests when needed
+   - Success Criteria: No more 401 errors, proper API key usage
+
+2. **Improve Rate Limiting:**
+   - [ ] Implement exponential backoff for retries
+   - [ ] Add proper rate limit detection from response headers
+   - [ ] Cache successful responses to reduce API calls
+   - Success Criteria: No more rate limit errors, efficient API usage
+
+3. **Handle Missing Data:**
+   - [ ] Add proper error handling for 404 responses
+   - [ ] Implement fallback data sources where available
+   - [ ] Add user-friendly error messages
+   - Success Criteria: Graceful handling of missing data, clear user feedback
+
+4. **Testing and Validation:**
+   - [ ] Test with and without API key
+   - [ ] Verify rate limit handling
+   - [ ] Test error scenarios
+   - Success Criteria: All error cases handled properly
+
+### Project Status Board
+- [x] Fix API Authentication
+  - [x] Review and fix API key configuration
+  - [x] Implement proper API key header format
+  - [x] Add fallback to unauthenticated requests when needed
+- [x] Improve Rate Limiting
+- [x] Handle Missing Data
+- [x] Show annualized inflation for 'since BERA TGE' in All-time column for all chains, and match column widths
+- [ ] Testing and Validation
+
+### Executor's Feedback or Assistance Requests
+- Updated the All-time annualized inflation calculation to use the BERA TGE date (2025-01-20) as the start date for all chains, ensuring consistent calculation.
+- Adjusted the table so all main columns (including All-time) are now equal width.
+- Please review the UI and confirm that annualized inflation is now shown for all chains and the columns are visually consistent.
+
+### Lessons
+- CoinGecko API key should be passed in the `x-cg-demo-api-key` header, not as a URL parameter
+- Always check API documentation for the correct authentication method
+- Keep API key configuration consistent across all API routes
+
+## Planner Mode: Comprehensive Plan for Root Cause Analysis and Permanent Fix of 'circulatingSupply' Error
+
+### Background and Motivation
+- The error `Cannot read properties of undefined (reading 'circulatingSupply')` has recurred multiple times, indicating that previous fixes have not addressed the root cause or have not been robust enough.
+- This error disrupts the user experience and undermines confidence in the dashboard's reliability.
+
+### Key Challenges and Analysis
+- The error occurs when code attempts to access `.circulatingSupply` on an object that is `undefined`.
+- This can happen if:
+  1. The API call fails or returns an error (network, server, or data issue).
+  2. The API returns a response without the expected fields (e.g., malformed or partial data).
+  3. The frontend does not check for `undefined` before accessing properties.
+  4. There is a race condition or stale cache causing missing data.
+- Previous fixes have focused on adding defensive checks, but the error persists, suggesting a deeper or more systemic issue.
+
+### High-level Task Breakdown
+1. **Comprehensive Diagnostics**
+   - [ ] Add detailed logging in both API and frontend to capture:
+     - The full API response for all supply endpoints (BERA, BGT, others).
+     - The state of all supply-related variables before rendering.
+     - Any errors or warnings from API calls or data parsing.
+   - [ ] Capture and review logs from a failing session to identify exactly when and why `undefined` is being passed to the UI.
+
+2. **Code Review and Data Flow Audit**
+   - [ ] Review all code paths that fetch, transform, and consume supply data (API, hooks, components).
+   - [ ] Map out the full data flow from API to UI for `circulatingSupply` and related fields.
+   - [ ] Identify any places where data could be lost, overwritten, or not properly checked.
+
+3. **Robust Error Handling and Fallbacks**
+   - [ ] Ensure all API endpoints return a consistent, well-typed response (with explicit error fields if needed).
+   - [ ] In hooks and components, always check for `undefined` or missing fields before rendering or using the data.
+   - [ ] Show a clear loading or error state in the UI if data is missing or invalid, never attempt to render `undefined` values.
+   - [ ] Add automated tests to simulate API failures and malformed data, verifying that the UI handles these cases gracefully.
+
+4. **Permanent Fix and Validation**
+   - [ ] Implement fixes based on findings from diagnostics and code review.
+   - [ ] Validate the fix by reproducing the error scenario and confirming it no longer occurs.
+   - [ ] Monitor logs and user reports for recurrence.
+
+### Success Criteria
+- The error `Cannot read properties of undefined (reading 'circulatingSupply')` no longer occurs in any scenario (including API failures, slow loads, or malformed data).
+- The UI always shows a clear loading or error state if supply data is missing or invalid.
+- Automated and manual tests confirm robust handling of all edge cases. 

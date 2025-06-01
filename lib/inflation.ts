@@ -44,6 +44,10 @@ export function calculateBeraInflation(
   days: number
 ): InflationStats | null {
   if (!emissions || emissions.length === 0) return null;
+  // Defensive: check beraSupply
+  if (!beraSupply || typeof beraSupply.circulatingSupply !== 'number' || typeof beraSupply.totalSupply !== 'number') {
+    return null;
+  }
   // Use the last N complete days
   const recent = getLastNCompleteDays(emissions, days);
   if (recent.length === 0) return null;
@@ -66,6 +70,13 @@ export function calculateBeraBgtInflation(
   days: number
 ): InflationStats | null {
   if (!emissions || emissions.length === 0) return null;
+  // Defensive: check beraSupply and bgtSupply
+  if (!beraSupply || typeof beraSupply.circulatingSupply !== 'number' || typeof beraSupply.totalSupply !== 'number') {
+    return null;
+  }
+  if (!bgtSupply || typeof bgtSupply.circulatingSupply !== 'number' || typeof bgtSupply.totalSupply !== 'number') {
+    return null;
+  }
   // Use the last N complete days
   const recent = getLastNCompleteDays(emissions, days);
   if (recent.length === 0) return null;

@@ -3,7 +3,6 @@ import { calculateBeraInflation, calculateBeraBgtInflation, EmissionDataPoint, S
 
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY || '';
-const COINGECKO_API_KEY_PARAM = `x_cg_demo_api_key=${COINGECKO_API_KEY}`;
 const CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
 const RATE_LIMIT_DELAY = 2000; // 2 seconds between requests (30 per minute)
 const MAX_RETRIES = 3;
@@ -40,8 +39,18 @@ async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<Respo
   let lastError;
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(url);
-      
+      console.log(`[fetchWithRetry] Attempt ${i+1} for URL:`, url);
+      console.log(`[fetchWithRetry] Using headers:`, { 'x-cg-demo-api-key': COINGECKO_API_KEY });
+      const response = await fetch(url, {
+        headers: {
+          'x-cg-demo-api-key': COINGECKO_API_KEY
+        }
+      });
+      console.log(`[fetchWithRetry] Response status:`, response.status, response.statusText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`[fetchWithRetry] Response body:`, errorText);
+      }
       if (response.ok) {
         return response;
       }
@@ -194,16 +203,50 @@ async function fetchChainData(chainId: string) {
     await delay(RATE_LIMIT_DELAY);
 
     // Fetch current data for other chains
-    const currentUrl = `${COINGECKO_BASE_URL}/coins/${chainId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&${COINGECKO_API_KEY_PARAM}`;
-    const currentResponse = await fetchWithRetry(currentUrl);
+    const currentUrl = `${COINGECKO_BASE_URL}/coins/${chainId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`;
+    let currentResponse;
+    try {
+      currentResponse = await fetchWithRetry(currentUrl);
+    } catch (error) {
+      // If rate limited or fetch fails, return cached data as stale
+      if (cache.data[chainId]) {
+        return {
+          ...cache.data[chainId],
+          stale: true,
+          warning: 'Data may be out of date due to rate limiting or fetch error.'
+        };
+      }
+      return {
+        symbol: chainId.toUpperCase(),
+        error: error instanceof Error ? error.message : String(error),
+        stale: false
+      };
+    }
     const currentData = await currentResponse.json();
 
     // Add delay between requests
     await delay(RATE_LIMIT_DELAY);
 
     // Fetch historical data (365 days)
-    const historicalUrl = `${COINGECKO_BASE_URL}/coins/${chainId}/market_chart?vs_currency=usd&days=365&interval=daily&${COINGECKO_API_KEY_PARAM}`;
-    const historicalResponse = await fetchWithRetry(historicalUrl);
+    const historicalUrl = `${COINGECKO_BASE_URL}/coins/${chainId}/market_chart?vs_currency=usd&days=365&interval=daily`;
+    let historicalResponse;
+    try {
+      historicalResponse = await fetchWithRetry(historicalUrl);
+    } catch (error) {
+      // If rate limited or fetch fails, return cached data as stale
+      if (cache.data[chainId]) {
+        return {
+          ...cache.data[chainId],
+          stale: true,
+          warning: 'Data may be out of date due to rate limiting or fetch error.'
+        };
+      }
+      return {
+        symbol: chainId.toUpperCase(),
+        error: error instanceof Error ? error.message : String(error),
+        stale: false
+      };
+    }
     const historicalData = await historicalResponse.json();
 
     // Process the data

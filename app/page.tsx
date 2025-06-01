@@ -41,7 +41,7 @@ const METRIC_EXPLANATIONS = {
 };
 
 function DashboardContent() {
-  const { beraSupply, bgtSupply, beraPrice, duneEmissions, duneLastUpdated, supplyData, isLoading, error, refetch } = useDashboardData();
+  const { beraSupply, bgtSupply, beraPrice, duneEmissions, duneLastUpdated, duneEmissionsError, supplyData, isLoading, error, refetch } = useDashboardData();
   const [supplyWarning, setSupplyWarning] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -239,6 +239,32 @@ function DashboardContent() {
     );
   }
 
+  if (duneEmissionsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">Error: Unable to load latest Dune emissions data.</div>
+          <div className="text-gray-600 mb-4">Showing last known data or fallback. Some metrics may be out of date or unavailable.</div>
+          <button 
+            onClick={refetch}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Defensive: check for supply data before rendering
+  if (!beraSupply || !bgtSupply || !beraPrice || !duneEmissions || !supplyData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center text-gray-500">Loading data...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -307,11 +333,15 @@ function DashboardContent() {
             {supplyWarning}
           </div>
         )}
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Berachain Dashboard</h1>
-        {/* Dune Last Updated Indicator */}
-        {duneLastUpdatedDisplay && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">{duneLastUpdatedDisplay}</div>
-        )}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Berachain Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-400">* Annualized rate</span>
+            <span className="text-xs text-gray-500">
+              Data provided by <a href="https://www.coingecko.com?utm_source=berachain-dashboard&utm_medium=referral" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">CoinGecko</a>
+            </span>
+          </div>
+        </div>
         {/* Combined Stats Panel */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-10">
           <div className="border p-4 rounded-lg shadow-sm bg-white dark:bg-gray-800 flex flex-col col-span-1 transition-all duration-200 hover:shadow-md hover:border-blue-400 focus-within:shadow-md focus-within:border-blue-400">
@@ -483,15 +513,6 @@ function DashboardContent() {
               </tbody>
             </table>
           </div>
-        </div>
-        {/* Add annualized note below inflation panels */}
-        <div className="w-full text-center text-xs text-gray-400 mt-[-1.5rem] mb-12">
-          * Annualized rate
-        </div>
-
-        {/* Attribution for CoinGecko data */}
-        <div className="text-xs text-gray-500 mt-4 mb-8 text-center">
-          Data provided by <a href="https://www.coingecko.com?utm_source=berachain-dashboard&utm_medium=referral" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">CoinGecko</a>
         </div>
 
         {/* Chart Tabs and Chart Display */}

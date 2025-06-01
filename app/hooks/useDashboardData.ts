@@ -20,31 +20,54 @@ async function fetchBeraPrice(): Promise<TokenPrice> {
   return response.json();
 }
 
-const fetchDuneEmissions = async (): Promise<{ emissions: DuneDataPoint[]; lastUpdated?: string }> => {
+const fetchDuneEmissions = async (): Promise<{ emissions: DuneDataPoint[]; lastUpdated?: string; error?: boolean }> => {
   try {
     const response = await fetch(`/api/dune?t=${Date.now()}`);
-    const data = await response.json();
-    
-    if (!data.emissions) {
-      console.error('No emissions data in response:', data);
-      return { emissions: [] };
+    if (response.ok) {
+      const data = await response.json();
+      if (!data.emissions) {
+        console.error('No emissions data in response:', data);
+        return { emissions: [], error: true };
+      }
+      return {
+        emissions: data.emissions.map((row: any) => ({
+          period: row.period,
+          burnt_amount: row.burnt_amount,
+          daily_emission: row.daily_emission,
+          minted_amount: row.minted_amount,
+          total_burnt: row.total_burnt,
+          total_emission: row.total_emission,
+          avg_emission_7d: row.avg_emission_7d
+        })),
+        lastUpdated: data.lastUpdated
+      };
+    } else {
+      // Fallback: try to fetch last known/cached results
+      const fallbackRes = await fetch(`/api/dune?fallback=1`);
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.emissions) {
+          console.warn('Using fallback Dune emissions data.');
+          return {
+            emissions: fallbackData.emissions.map((row: any) => ({
+              period: row.period,
+              burnt_amount: row.burnt_amount,
+              daily_emission: row.daily_emission,
+              minted_amount: row.minted_amount,
+              total_burnt: row.total_burnt,
+              total_emission: row.total_emission,
+              avg_emission_7d: row.avg_emission_7d
+            })),
+            lastUpdated: fallbackData.lastUpdated,
+            error: true
+          };
+        }
+      }
+      return { emissions: [], error: true };
     }
-    
-    return {
-      emissions: data.emissions.map((row: any) => ({
-        period: row.period,
-        burnt_amount: row.burnt_amount,
-        daily_emission: row.daily_emission,
-        minted_amount: row.minted_amount,
-        total_burnt: row.total_burnt,
-        total_emission: row.total_emission,
-        avg_emission_7d: row.avg_emission_7d
-      })),
-      lastUpdated: data.lastUpdated
-    };
   } catch (error) {
     console.error('Error fetching Dune emissions:', error);
-    return { emissions: [] };
+    return { emissions: [], error: true };
   }
 };
 
@@ -93,14 +116,22 @@ export function useDashboardData() {
 
   // Log data changes for debugging
   useEffect(() => {
-    if (duneEmissionsQuery.data?.emissions) {
-      console.log('Dune data updated:', {
-        latest: duneEmissionsQuery.data.emissions[0],
-        lastUpdated: duneEmissionsQuery.data.lastUpdated,
-        timestamp: new Date().toISOString()
-      });
+    if (beraSupplyQuery.data || beraSupplyQuery.error) {
+      console.log('[Diagnostics] beraSupplyQuery:', beraSupplyQuery);
     }
-  }, [duneEmissionsQuery.data]);
+    if (bgtSupplyQuery.data || bgtSupplyQuery.error) {
+      console.log('[Diagnostics] bgtSupplyQuery:', bgtSupplyQuery);
+    }
+    if (beraPriceQuery.data || beraPriceQuery.error) {
+      console.log('[Diagnostics] beraPriceQuery:', beraPriceQuery);
+    }
+    if (duneEmissionsQuery.data || duneEmissionsQuery.error) {
+      console.log('[Diagnostics] duneEmissionsQuery:', duneEmissionsQuery);
+    }
+    if (supplyDataQuery.data || supplyDataQuery.error) {
+      console.log('[Diagnostics] supplyDataQuery:', supplyDataQuery);
+    }
+  }, [beraSupplyQuery.data, beraSupplyQuery.error, bgtSupplyQuery.data, bgtSupplyQuery.error, beraPriceQuery.data, beraPriceQuery.error, duneEmissionsQuery.data, duneEmissionsQuery.error, supplyDataQuery.data, supplyDataQuery.error]);
 
   const refetchAll = async () => {
     await Promise.all([
@@ -118,6 +149,7 @@ export function useDashboardData() {
     beraPrice: beraPriceQuery.data,
     duneEmissions: duneEmissionsQuery.data?.emissions || [],
     duneLastUpdated: duneEmissionsQuery.data?.lastUpdated,
+    duneEmissionsError: duneEmissionsQuery.data?.error || duneEmissionsQuery.error,
     supplyData: supplyDataQuery.data,
     isLoading: beraSupplyQuery.isLoading || bgtSupplyQuery.isLoading || beraPriceQuery.isLoading || duneEmissionsQuery.isLoading || supplyDataQuery.isLoading,
     error: beraSupplyQuery.error || bgtSupplyQuery.error || beraPriceQuery.error || duneEmissionsQuery.error || supplyDataQuery.error,
