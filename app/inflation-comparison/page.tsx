@@ -10,7 +10,7 @@ const TIMEFRAMES = [
   { label: '7d', days: 7 },
   { label: '30d', days: 30 },
   { label: '90d', days: 90 },
-  { label: 'All-time', days: 365 },
+  { label: 'All-time*', days: 365, isAllTime: true, note: 'Since BERA TGE (2025-01-20)' },
 ];
 
 // Unified mapping from CoinGecko IDs and dashboard keys to ticker and display name
@@ -68,7 +68,7 @@ function calcInflation(
   if (!chain || !Array.isArray(chain.supplyHistory)) return { value: null, actualDays: null };
   let supplyHistory = chain.supplyHistory;
   if (useGenesis) {
-    // Find the first data point on or after genesis
+    // Always use BERA TGE as the start date for all chains
     const startIdx = supplyHistory.findIndex(point => new Date(point.date) >= BERACHAIN_GENESIS_DATE);
     if (startIdx === -1 || startIdx === supplyHistory.length - 1) return { value: null, actualDays: null };
     const start = useTotalSupply ? (chain.current?.totalSupply ?? chain.totalSupply) : supplyHistory[startIdx].supply;
@@ -99,8 +99,8 @@ function calcInflation(
 }
 
 // Helper for inflation cell with tooltip if negative
-function InflationCell({ value, actualDays, requestedDays }: { value: number | null; actualDays: number | null; requestedDays: number }) {
-  if (value === null || value === undefined) return 'N/A';
+function InflationCell({ value, actualDays, requestedDays, unavailableMsg }: { value: number | null; actualDays: number | null; requestedDays: number; unavailableMsg?: string }) {
+  if (value === null || value === undefined) return unavailableMsg || '-';
   return (
     <span className={value < 0 ? 'text-red-500' : ''}>
       {value.toFixed(2)}%
@@ -116,7 +116,7 @@ function isExactPeriod(latest: Date, start: Date, days: number) {
 
 function InflationComparisonContent() {
   const { beraSupply, bgtSupply, beraPrice, duneEmissions, isLoading, error } = useDashboardData();
-  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[3]);
+  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[2]);
   const [otherChainsData, setOtherChainsData] = useState<Chain[]>([]);
   const [isLoadingOtherChains, setIsLoadingOtherChains] = useState(false);
   const [otherChainsError, setOtherChainsError] = useState<string | null>(null);
@@ -364,20 +364,20 @@ function InflationComparisonContent() {
                     Chain {sortConfig.key === 'chain' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th 
-                    className="p-2 text-left font-mono text-xs text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-2 text-left font-mono text-xs text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 w-32 whitespace-normal break-words"
                     onClick={() => handleSort('inflation')}
                   >
-                    Annualized Inflation ({selectedTimeframe.label})
+                    Annualized Inflation<br />({selectedTimeframe.label})
                     {sortConfig.key === 'inflation' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th 
-                    className="p-2 text-left font-mono text-xs text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-2 text-left font-mono text-xs text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 w-32 whitespace-normal break-words"
                     onClick={() => handleSort('absolute')}
                   >
                     Absolute (Tokens) {sortConfig.key === 'absolute' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th 
-                    className="p-2 text-left font-mono text-xs text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-2 text-left font-mono text-xs text-gray-500 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 w-32 whitespace-normal break-words"
                     onClick={() => handleSort('absoluteUsd')}
                   >
                     Absolute (USD) {sortConfig.key === 'absoluteUsd' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
@@ -392,12 +392,12 @@ function InflationComparisonContent() {
                     const absUsd = abs !== null && beraPrice?.usd ? abs * beraPrice.usd : null;
                     return (
                       <tr key={meta.ticker}>
-                        <td className="p-2 font-mono text-sm">{meta.ticker}</td>
-                        <td className="p-2 font-mono text-sm">
+                        <td className="p-2 font-mono text-sm w-32">{meta.ticker}</td>
+                        <td className="p-2 font-mono text-sm w-32">
                           <InflationCell value={chain.inflation && chain.inflation.inflationCirculating !== null ? chain.inflation.inflationCirculating : null} actualDays={selectedTimeframe.days} requestedDays={selectedTimeframe.days} />
                         </td>
-                        <td className="p-2 font-mono text-sm">{abs !== null ? formatNumber(abs, { decimals: 0 }) : '-'}</td>
-                        <td className="p-2 font-mono text-sm">{absUsd !== null ? formatCurrency(absUsd, { decimals: 0 }) : '-'}</td>
+                        <td className="p-2 font-mono text-sm w-32">{abs !== null ? formatNumber(abs, { decimals: 0 }) : '-'}</td>
+                        <td className="p-2 font-mono text-sm w-32">{absUsd !== null ? formatCurrency(absUsd, { decimals: 0 }) : '-'}</td>
                       </tr>
                     );
                   }
@@ -437,18 +437,18 @@ function InflationComparisonContent() {
                   }
                   return (
                     <tr key={meta.ticker}>
-                      <td className="p-2 font-mono text-sm">{meta.ticker}</td>
-                    <td className="p-2 font-mono text-sm">
+                      <td className="p-2 font-mono text-sm w-32">{meta.ticker}</td>
+                    <td className="p-2 font-mono text-sm w-32">
                         {showValue && inflationResult.value !== null ? (
                           <span>
                             <InflationCell value={inflationResult.value} actualDays={inflationResult.actualDays} requestedDays={selectedTimeframe.days} />
                           </span>
                         ) : (
-                          '-'
+                          <InflationCell value={null} actualDays={null} requestedDays={selectedTimeframe.days} unavailableMsg="-" />
                         )}
                     </td>
-                      <td className="p-2 font-mono text-sm">{showValue && abs !== null ? formatNumber(abs, { decimals: 0 }) : '-'}</td>
-                      <td className="p-2 font-mono text-sm">{showValue && absUsd !== null ? formatCurrency(absUsd, { decimals: 0 }) : '-'}</td>
+                      <td className="p-2 font-mono text-sm w-32">{showValue && abs !== null ? formatNumber(abs, { decimals: 0 }) : '-'}</td>
+                      <td className="p-2 font-mono text-sm w-32">{showValue && absUsd !== null ? formatCurrency(absUsd, { decimals: 0 }) : '-'}</td>
                   </tr>
                   );
                 })}
@@ -457,10 +457,10 @@ function InflationComparisonContent() {
           </div>
         )}
         <div className="text-xs text-gray-500 mt-4 text-center">
-          <span className="block text-gray-400 mb-2">Based on Circulating Supply</span>
-          <span>
-            All inflation rates shown are annualized. Historical supply is estimated as market cap divided by price, sourced from CoinGecko. Data may not reflect on-chain unlocks, burns, or supply events. See project README for details.
+          <span className="block mt-2">
+            All-time refers to the period since 20-1-2025 (the date of the Berachain genesis block). '-' means insufficient data for this period.
           </span>
+          <span className="block text-gray-400 mb-2">Based on Circulating Supply. Annualized for the full available period.</span>
           {sortedChains.some(chain => {
             const value = chain.symbol === 'BERA' || chain.symbol === 'BERA+BGT' 
               ? chain.inflation?.inflationCirculating 
@@ -483,6 +483,12 @@ function InflationComparisonContent() {
             Note: BERA price data is {(beraPrice as any)?.stale ? 'stale' : 'from a fallback source'} ({(beraPrice as any)?.source || 'unknown'}). Results may be less accurate.
           </div>
         ) : null}
+        {/* Add note about API key */}
+        {!process.env.COINGECKO_API_KEY && (
+          <div className="text-xs text-yellow-600 mt-2 text-center">
+            Note: CoinGecko API key not configured. Using free tier with rate limits.
+          </div>
+        )}
       </div>
     </div>
   );
