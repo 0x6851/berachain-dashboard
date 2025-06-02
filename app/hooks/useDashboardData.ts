@@ -20,56 +20,42 @@ async function fetchBeraPrice(): Promise<TokenPrice> {
   return response.json();
 }
 
-const fetchDuneEmissions = async (): Promise<{ emissions: DuneDataPoint[]; lastUpdated?: string; error?: boolean }> => {
+async function fetchDuneEmissions() {
   try {
-    const response = await fetch(`/api/dune?t=${Date.now()}`);
-    if (response.ok) {
-      const data = await response.json();
-      if (!data.emissions) {
-        console.error('No emissions data in response:', data);
-        return { emissions: [], error: true };
+    // Try Dune first
+    const duneResponse = await fetch('/api/dune');
+    if (duneResponse.ok) {
+      const duneData = await duneResponse.json();
+      // If successful, update backup
+      try {
+        await fetch('/api/backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            emissions: duneData.emissions,
+            source: 'dune'
+          })
+        });
+      } catch (error) {
+        console.error('Error updating backup:', error);
       }
-      return {
-        emissions: data.emissions.map((row: any) => ({
-          period: row.period,
-          burnt_amount: row.burnt_amount,
-          daily_emission: row.daily_emission,
-          minted_amount: row.minted_amount,
-          total_burnt: row.total_burnt,
-          total_emission: row.total_emission,
-          avg_emission_7d: row.avg_emission_7d
-        })),
-        lastUpdated: data.lastUpdated
-      };
-    } else {
-      // Fallback: try to fetch last known/cached results
-      const fallbackRes = await fetch(`/api/dune?fallback=1`);
-      if (fallbackRes.ok) {
-        const fallbackData = await fallbackRes.json();
-        if (fallbackData.emissions) {
-          console.warn('Using fallback Dune emissions data.');
-          return {
-            emissions: fallbackData.emissions.map((row: any) => ({
-              period: row.period,
-              burnt_amount: row.burnt_amount,
-              daily_emission: row.daily_emission,
-              minted_amount: row.minted_amount,
-              total_burnt: row.total_burnt,
-              total_emission: row.total_emission,
-              avg_emission_7d: row.avg_emission_7d
-            })),
-            lastUpdated: fallbackData.lastUpdated,
-            error: true
-          };
-        }
-      }
-      return { emissions: [], error: true };
+      return duneData;
     }
+    throw new Error('Dune API error');
   } catch (error) {
-    console.error('Error fetching Dune emissions:', error);
-    return { emissions: [], error: true };
+    console.warn('Falling back to backup data:', error);
+    // Fall back to backup data
+    const backupResponse = await fetch('/api/backup');
+    if (!backupResponse.ok) {
+      throw new Error('Failed to fetch backup data');
+    }
+    const backupData = await backupResponse.json();
+    if (backupData.error) {
+      throw new Error(backupData.error.error);
+    }
+    return backupData.data;
   }
-};
+}
 
 export function useDashboardData() {
   const beraSupplyQuery = useQuery({

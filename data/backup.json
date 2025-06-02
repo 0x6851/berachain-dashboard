@@ -1,0 +1,16 @@
+{
+  "emissions": [
+    {
+      "period": "2025-06-02 00:00",
+      "minted_amount": 36641,
+      "burnt_amount": -2498,
+      "daily_emission": 34143,
+      "total_emission": 14185979,
+      "total_burnt": 2378965.941190245,
+      "avg_emission_7d": 86945
+    }
+  ],
+  "lastUpdated": "2025-06-02T00:00:00.000Z",
+  "lastSynced": "2025-06-02T00:00:00.000Z",
+  "source": "backup"
+} 

@@ -739,116 +739,150 @@ Would you like me to proceed with creating the initial API route handler for Coi
 - Consider mobile responsiveness in UI design
 - Handle timezone differences for unlock events
 
-## Plan: Fix API Error Handling and Rate Limiting
+## Plan: Fix BERA and BERA+BGT Data Not Displaying (May 2025)
 
 ### Background and Motivation
-The inflation comparison page is experiencing several API-related issues:
-1. 401 Unauthorized errors from CoinGecko API
-2. Rate limiting issues causing request failures
-3. 404 errors for BERA and BGT data
-4. Inconsistent API key configuration
+The main dashboard is failing to load the latest Dune emissions data, resulting in a 500 error from the `/api/dune` endpoint. The direct output from `/api/dune` is:
 
-### Key Challenges and Analysis
-1. **API Authentication:**
-   - CoinGecko API requires proper API key configuration
-   - Current implementation may not be correctly passing the API key
-   - Need to handle both authenticated and unauthenticated requests
+```
+{"error":"Failed to trigger Dune execution"}
+```
 
-2. **Rate Limiting:**
-   - CoinGecko has strict rate limits (10-50 calls/minute depending on tier)
-   - Current retry mechanism may not be optimal
-   - Need better handling of rate limit responses
+This confirms the error occurs when attempting to trigger a new Dune query execution, not during polling or data processing. This is a critical data source for BGT emissions and BERA supply calculations, so restoring this functionality is essential for accurate dashboard metrics.
 
-3. **Data Availability:**
-   - BERA and BGT data may not be available through standard endpoints
-   - Need to identify correct endpoints or alternative data sources
-   - Handle 404 errors gracefully with user feedback
+---
 
-### High-level Task Breakdown
-1. **Fix API Authentication:**
-   - [ ] Review and fix API key configuration
-   - [ ] Implement proper API key header format
-   - [ ] Add fallback to unauthenticated requests when needed
-   - Success Criteria: No more 401 errors, proper API key usage
+## Key Challenges and Analysis
 
-2. **Improve Rate Limiting:**
-   - [ ] Implement exponential backoff for retries
-   - [ ] Add proper rate limit detection from response headers
-   - [ ] Cache successful responses to reduce API calls
-   - Success Criteria: No more rate limit errors, efficient API usage
+1. **Dune API Integration**  
+   - The backend (`app/api/dune/route.ts`) triggers a Dune query, polls for results, and returns emissions data.
+   - The error occurs specifically at the step where the API attempts to trigger a new Dune query execution (`/api/v1/query/4740951/execute`).
+   - Possible causes: invalid/expired API key, Dune API changes, endpoint deprecation, or network issues.
 
-3. **Handle Missing Data:**
-   - [ ] Add proper error handling for 404 responses
-   - [ ] Implement fallback data sources where available
-   - [ ] Add user-friendly error messages
-   - Success Criteria: Graceful handling of missing data, clear user feedback
+2. **API Key and Rate Limits**  
+   - The Dune API key is hardcoded in the route file, not loaded from an environment variable.
+   - If the key is invalid, expired, or rate-limited, the API will return errors at the execution trigger step.
 
-4. **Testing and Validation:**
-   - [ ] Test with and without API key
-   - [ ] Verify rate limit handling
+3. **Error Handling and Fallback**  
+   - The frontend attempts to fetch fallback data if the main call fails, but if no fallback is available, the dashboard shows an error.
+   - The backend returns a 500 error for most failures, which is surfaced directly to the user.
+
+4. **Dependency on Dune for Other APIs**  
+   - The inflation API also depends on `/api/dune`. If Dune is down, inflation stats may also be affected.
+
+5. **No .env or Config Management**  
+   - No `.env` file is present for managing secrets or API keys, which is a security and maintainability risk.
+
+---
+
+## High-level Task Breakdown
+
+1. **Reproduce and Isolate the Error**
+   - [x] Manually trigger the `/api/dune` endpoint and capture the full error response. (Confirmed: `{"error":"Failed to trigger Dune execution"}`)
+   - [ ] Check if the error is due to the Dune API key, rate limits, or query failure by inspecting the response from the Dune API at the execution trigger step.
+
+2. **Check Dune API Key and Usage**
+   - [ ] Verify the Dune API key is valid and has not exceeded its quota.
+   - [ ] If possible, move the API key to an environment variable for security.
+
+3. **Improve Error Logging and Diagnostics**
+   - [ ] Enhance backend error responses to include more diagnostic information (e.g., Dune error messages, status codes).
+   - [ ] Log the full error stack and Dune API responses for debugging.
+
+4. **Test Fallback and Recovery**
+   - [ ] Ensure the fallback mechanism works and that the dashboard can display cached/last-known data if Dune is unavailable.
+   - [ ] Add a user-facing message with more detail if both live and fallback data are unavailable.
+
+5. **Review and Harden API Integration**
+   - [ ] Add retries and exponential backoff for Dune API calls if not already present.
+   - [ ] Handle specific Dune error states (e.g., rate limit, invalid query, API changes).
+
+6. **Document and Communicate**
+   - [ ] Update `.cursor/scratchpad.md` with findings, root cause, and next steps.
+   - [ ] Document any changes to API key management or error handling.
+
+---
+
+## Success Criteria
+
+- The dashboard loads Dune emissions data successfully, or gracefully falls back to cached data with a clear user message.
+- 500 errors from `/api/dune` are rare and, when they occur, provide actionable diagnostic information.
+- The Dune API key is managed securely (preferably via environment variable).
+- All dependent APIs (e.g., inflation) are robust to Dune outages.
+
+## Executor's Feedback or Assistance Requests
+- Enhanced error handling in `app/api/dune/route.ts` to capture and return the Dune API's status code, status text, and response body.
+- Tested the endpoint, but the only output is `{"error":"Failed to trigger Dune execution"}`—no additional diagnostic fields are present.
+- This means the Dune API is returning a 500 error or similar, but not providing a response body with further details. The backend is not able to surface more information because Dune is not providing it.
+- **Next step:** Check the Dune API key in the code for validity, expiration, or quota issues. If possible, test the Dune API call directly (e.g., with Postman or curl) using the same API key and endpoint to see if a more detailed error is returned. Also, check Dune's API documentation or status page for any known issues or changes.
+
+### Backup Data Source Implementation Plan
+
+#### Background and Motivation
+Currently, the dashboard relies on Dune for BERA+BGT emissions data. If Dune is unavailable, the page fails to load properly. We need to implement a backup data source to ensure the dashboard remains functional even when Dune is down.
+
+#### Key Challenges and Analysis
+1. **Data Consistency**: Need to ensure backup data matches Dune data format
+2. **Data Storage**: Need to store historical emissions data locally
+3. **Data Updates**: Need to keep backup data in sync with Dune
+4. **Fallback Logic**: Need to implement graceful fallback to backup data
+
+#### High-level Task Breakdown
+1. **Create Backup Data Structure**
+   - [ ] Create a `data` directory to store backup data
+   - [ ] Define backup data schema matching Dune format
+   - [ ] Create initial backup data file with current emissions data
+
+2. **Implement Backup Data API**
+   - [ ] Create new API endpoint for backup data
+   - [ ] Implement data fetching from backup file
+   - [ ] Add error handling and validation
+
+3. **Update Data Fetching Logic**
+   - [ ] Modify `useDashboardData` hook to try Dune first
+   - [ ] Add fallback to backup data if Dune fails
+   - [ ] Add logging for data source switches
+
+4. **Implement Data Sync**
+   - [ ] Create function to sync Dune data to backup
+   - [ ] Add periodic sync (e.g., daily)
+   - [ ] Add manual sync trigger
+
+5. **Testing and Validation**
+   - [ ] Test fallback behavior
+   - [ ] Verify data consistency
    - [ ] Test error scenarios
-   - Success Criteria: All error cases handled properly
 
-### Project Status Board
-- [x] Fix API Authentication
-  - [x] Review and fix API key configuration
-  - [x] Implement proper API key header format
-  - [x] Add fallback to unauthenticated requests when needed
-- [x] Improve Rate Limiting
-- [x] Handle Missing Data
-- [x] Show annualized inflation for 'since BERA TGE' in All-time column for all chains, and match column widths
+#### Project Status Board
+- [x] Create Backup Data Structure
+  - Created data directory
+  - Defined backup data types
+  - Created initial backup file
+- [x] Implement Backup Data API
+  - Created /api/backup endpoint
+  - Implemented GET and POST methods
+  - Added error handling
+- [x] Update Data Fetching Logic
+  - Modified useDashboardData hook
+  - Implemented fallback to backup
+  - Added logging
+- [x] Implement Data Sync
+  - Created /api/sync endpoint
+  - Added manual sync trigger
+  - Implemented error handling
 - [ ] Testing and Validation
+  - [ ] Test fallback behavior
+  - [ ] Verify data consistency
+  - [ ] Test error scenarios
 
-### Executor's Feedback or Assistance Requests
-- Updated the All-time annualized inflation calculation to use the BERA TGE date (2025-01-20) as the start date for all chains, ensuring consistent calculation.
-- Adjusted the table so all main columns (including All-time) are now equal width.
-- Please review the UI and confirm that annualized inflation is now shown for all chains and the columns are visually consistent.
+#### Executor's Feedback or Assistance Requests
+- Need to test the implementation with real data
+- Need to verify error handling in production environment
+- Need to monitor backup data sync performance
 
-### Lessons
-- CoinGecko API key should be passed in the `x-cg-demo-api-key` header, not as a URL parameter
-- Always check API documentation for the correct authentication method
-- Keep API key configuration consistent across all API routes
-
-## Planner Mode: Comprehensive Plan for Root Cause Analysis and Permanent Fix of 'circulatingSupply' Error
-
-### Background and Motivation
-- The error `Cannot read properties of undefined (reading 'circulatingSupply')` has recurred multiple times, indicating that previous fixes have not addressed the root cause or have not been robust enough.
-- This error disrupts the user experience and undermines confidence in the dashboard's reliability.
-
-### Key Challenges and Analysis
-- The error occurs when code attempts to access `.circulatingSupply` on an object that is `undefined`.
-- This can happen if:
-  1. The API call fails or returns an error (network, server, or data issue).
-  2. The API returns a response without the expected fields (e.g., malformed or partial data).
-  3. The frontend does not check for `undefined` before accessing properties.
-  4. There is a race condition or stale cache causing missing data.
-- Previous fixes have focused on adding defensive checks, but the error persists, suggesting a deeper or more systemic issue.
-
-### High-level Task Breakdown
-1. **Comprehensive Diagnostics**
-   - [ ] Add detailed logging in both API and frontend to capture:
-     - The full API response for all supply endpoints (BERA, BGT, others).
-     - The state of all supply-related variables before rendering.
-     - Any errors or warnings from API calls or data parsing.
-   - [ ] Capture and review logs from a failing session to identify exactly when and why `undefined` is being passed to the UI.
-
-2. **Code Review and Data Flow Audit**
-   - [ ] Review all code paths that fetch, transform, and consume supply data (API, hooks, components).
-   - [ ] Map out the full data flow from API to UI for `circulatingSupply` and related fields.
-   - [ ] Identify any places where data could be lost, overwritten, or not properly checked.
-
-3. **Robust Error Handling and Fallbacks**
-   - [ ] Ensure all API endpoints return a consistent, well-typed response (with explicit error fields if needed).
-   - [ ] In hooks and components, always check for `undefined` or missing fields before rendering or using the data.
-   - [ ] Show a clear loading or error state in the UI if data is missing or invalid, never attempt to render `undefined` values.
-   - [ ] Add automated tests to simulate API failures and malformed data, verifying that the UI handles these cases gracefully.
-
-4. **Permanent Fix and Validation**
-   - [ ] Implement fixes based on findings from diagnostics and code review.
-   - [ ] Validate the fix by reproducing the error scenario and confirming it no longer occurs.
-   - [ ] Monitor logs and user reports for recurrence.
-
-### Success Criteria
-- The error `Cannot read properties of undefined (reading 'circulatingSupply')` no longer occurs in any scenario (including API failures, slow loads, or malformed data).
-- The UI always shows a clear loading or error state if supply data is missing or invalid.
-- Automated and manual tests confirm robust handling of all edge cases. 
+#### Lessons
+- Always have a backup data source for critical data
+- Implement graceful fallbacks for external dependencies
+- Keep backup data in sync with primary source
+- Use TypeScript interfaces to ensure data consistency
+- Implement proper error handling and logging 

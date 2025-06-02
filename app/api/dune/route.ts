@@ -41,7 +41,21 @@ export async function GET(request: Request) {
     },
   });
   if (!executeRes.ok) {
-    return new Response(JSON.stringify({ error: 'Failed to trigger Dune execution' }), { status: 500 });
+    let errorText = '';
+    try {
+      errorText = await executeRes.text();
+    } catch (e) {
+      errorText = 'Could not read error body';
+    }
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to trigger Dune execution',
+        status: executeRes.status,
+        statusText: executeRes.statusText,
+        duneResponse: errorText
+      }),
+      { status: 500 }
+    );
   }
   const executeData = await executeRes.json();
   const executionId = executeData.execution_id;
